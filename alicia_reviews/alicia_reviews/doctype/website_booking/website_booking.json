@@ -1,0 +1,25 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["customer_name", "phone", "email", "service", "preferred_date", "preferred_time", "notes", "status"],
+ "fields": [
+  {"fieldname": "customer_name", "fieldtype": "Data", "in_list_view": 1, "label": "Customer Name", "reqd": 1},
+  {"fieldname": "phone", "fieldtype": "Data", "in_list_view": 1, "label": "Phone", "reqd": 1},
+  {"fieldname": "email", "fieldtype": "Data", "label": "Email"},
+  {"fieldname": "service", "fieldtype": "Data", "in_list_view": 1, "label": "Service", "reqd": 1},
+  {"fieldname": "preferred_date", "fieldtype": "Date", "in_list_view": 1, "label": "Preferred Date", "reqd": 1},
+  {"fieldname": "preferred_time", "fieldtype": "Data", "in_list_view": 1, "label": "Preferred Time", "reqd": 1},
+  {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes"},
+  {"default": "Pending", "fieldname": "status", "fieldtype": "Select", "in_list_view": 1, "label": "Status", "options": "Pending\nConfirmed\nCancelled\nCompleted"}
+ ],
+ "module": "Alicia Reviews",
+ "name": "Website Booking",
+ "permissions": [
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC"
+}
