@@ -69,6 +69,19 @@ def validate_booking(data):
         frappe.throw("Please select a preferred time.")
     if len(notes) > 500:
         frappe.throw("Notes must be under 500 characters.")
+
+    from alicia_reviews.alicia_reviews.doctype.website_booking.website_booking import (
+        get_settings,
+        is_weekend,
+    )
+
+    settings = get_settings()
+    if settings.block_weekend_bookings and is_weekend(date):
+        frappe.throw(
+            settings.weekend_message
+            or "Fridays and Saturdays are walk-in only — please choose another day."
+        )
+
     return name, phone, email, service, date, time, notes
 
 def submit_booking(data):

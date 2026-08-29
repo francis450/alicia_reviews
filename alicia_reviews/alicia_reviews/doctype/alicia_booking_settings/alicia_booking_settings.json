@@ -1,0 +1,133 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-08-29 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "weekend_section",
+  "block_weekend_bookings",
+  "weekend_message",
+  "notify_section",
+  "notify_recipients",
+  "sms_section",
+  "sms_enabled",
+  "review_sms_before_send",
+  "sms_confirmed",
+  "sms_cancelled",
+  "sms_column",
+  "sms_new_booking_enabled",
+  "sms_new_booking_number",
+  "sms_new_booking"
+ ],
+ "fields": [
+  {
+   "fieldname": "weekend_section",
+   "fieldtype": "Section Break",
+   "label": "Friday & Saturday (walk-in only)"
+  },
+  {
+   "default": "1",
+   "description": "When ticked, the website and the desk both refuse new bookings that fall on a Friday or Saturday, and any Pending/Confirmed weekend bookings are auto-cancelled overnight.",
+   "fieldname": "block_weekend_bookings",
+   "fieldtype": "Check",
+   "label": "Block Friday & Saturday bookings"
+  },
+  {
+   "default": "Fridays and Saturdays are walk-in only — please choose another day, or just come in on the day.",
+   "fieldname": "weekend_message",
+   "fieldtype": "Small Text",
+   "label": "Message shown when a weekend date is picked"
+  },
+  {
+   "fieldname": "notify_section",
+   "fieldtype": "Section Break",
+   "label": "Staff notification for new bookings"
+  },
+  {
+   "description": "One user email per line. These people get a notification (the bell) for every new website booking.",
+   "fieldname": "notify_recipients",
+   "fieldtype": "Small Text",
+   "label": "Notify these users"
+  },
+  {
+   "fieldname": "sms_section",
+   "fieldtype": "Section Break",
+   "label": "Client SMS"
+  },
+  {
+   "default": "0",
+   "description": "Turn on only after an SMS gateway is set up in SMS Settings. Until then, confirm/cancel texts are logged, not sent.",
+   "fieldname": "sms_enabled",
+   "fieldtype": "Check",
+   "label": "Send SMS to clients on Confirm / Cancel"
+  },
+  {
+   "default": "1",
+   "depends_on": "sms_enabled",
+   "description": "Pop up the message on the booking so staff can edit it before it goes out, instead of sending automatically the moment the status changes.",
+   "fieldname": "review_sms_before_send",
+   "fieldtype": "Check",
+   "label": "Review the SMS before sending"
+  },
+  {
+   "default": "Hi {customer_name}, your appointment at Alicia Hairline & Beauty for {service} on {preferred_date} at {preferred_time} is CONFIRMED. See you then!",
+   "depends_on": "sms_enabled",
+   "fieldname": "sms_confirmed",
+   "fieldtype": "Small Text",
+   "label": "Confirmed SMS text"
+  },
+  {
+   "default": "Hi {customer_name}, we're sorry — your appointment at Alicia Hairline & Beauty on {preferred_date} has been cancelled. Please call +254 712 676182 to rebook.",
+   "depends_on": "sms_enabled",
+   "fieldname": "sms_cancelled",
+   "fieldtype": "Small Text",
+   "label": "Cancelled SMS text"
+  },
+  {
+   "fieldname": "sms_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "sms_new_booking_enabled",
+   "fieldtype": "Check",
+   "label": "Also SMS the salon on every new booking"
+  },
+  {
+   "depends_on": "sms_new_booking_enabled",
+   "fieldname": "sms_new_booking_number",
+   "fieldtype": "Data",
+   "label": "Salon phone number for new-booking SMS",
+   "options": "Phone"
+  },
+  {
+   "default": "New website booking: {customer_name}, {service}, {preferred_date} {preferred_time}. Status: {status}.",
+   "depends_on": "sms_new_booking_enabled",
+   "fieldname": "sms_new_booking",
+   "fieldtype": "Small Text",
+   "label": "New-booking SMS text (to salon)"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-08-29 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Alicia Reviews",
+ "name": "Alicia Booking Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 0,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}
