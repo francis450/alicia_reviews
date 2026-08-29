@@ -6,11 +6,38 @@ from frappe.utils import add_days, getdate, nowdate
 
 from alicia_reviews.alicia_reviews.doctype.website_booking.website_booking import (
 	cancel_weekend_bookings,
+	deliver_sms,
 	get_status_sms_preview,
 	normalize_msisdn,
 	send_booking_sms,
 	send_status_sms,
 )
+
+AT_URL = "https://api.africastalking.com/version1/messaging"
+
+
+class _FakeATResponse:
+	def __init__(self, status_code):
+		self._status_code = status_code
+
+	def raise_for_status(self):
+		pass
+
+	def json(self):
+		return {
+			"SMSMessageData": {
+				"Message": "Handled",
+				"Recipients": [
+					{
+						"number": "+254757185189",
+						"status": "Sent" if self._status_code in (100, 101, 102) else "UserInBlacklist",
+						"statusCode": self._status_code,
+						"messageId": "ATXid_test",
+						"cost": "KES 0.8000",
+					}
+				],
+			}
+		}
 
 NOTIFY_USER = "maggie@alicia.boraerp.co.ke"
 
@@ -153,6 +180,25 @@ class TestWebsiteBooking(FrappeTestCase):
 			self.assertEqual(send_booking_sms(doc, "confirmed"), "sent")
 		send.assert_called_once()
 		self.assertEqual(send.call_args[0][0], ["+254712345678"])
+
+	# ---------------------------------------------------- africa's talking path
+	def test_deliver_sms_africastalking_accepted(self):
+		before = frappe.db.count("SMS Log")
+		with patch.object(frappe.db, "get_single_value", return_value=AT_URL), patch(
+			"requests.post", return_value=_FakeATResponse(101)
+		):
+			self.assertEqual(deliver_sms("+254757185189", "hi", context="test"), "sent")
+		self.assertEqual(frappe.db.count("SMS Log"), before + 1)
+
+	def test_deliver_sms_africastalking_blacklisted(self):
+		before_sms = frappe.db.count("SMS Log")
+		before_err = frappe.db.count("Error Log")
+		with patch.object(frappe.db, "get_single_value", return_value=AT_URL), patch(
+			"requests.post", return_value=_FakeATResponse(406)
+		):
+			self.assertEqual(deliver_sms("+254757185189", "hi", context="test"), "error")
+		self.assertEqual(frappe.db.count("SMS Log"), before_sms)
+		self.assertEqual(frappe.db.count("Error Log"), before_err + 1)
 
 	# ------------------------------------------------------- review-before-send
 	def test_review_mode_holds_back_auto_sms(self):

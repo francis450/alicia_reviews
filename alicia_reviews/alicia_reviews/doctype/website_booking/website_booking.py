@@ -162,15 +162,39 @@ def resolve_booking_sms(doc, kind: str, settings=None):
 	return number, _render_template(template, doc)
 
 
+# Africa's Talking per-recipient status codes that mean "accepted for delivery".
+# Anything else (403 InvalidPhoneNumber, 405 InsufficientBalance, 406 UserInBlacklist,
+# 407 CouldNotRoute, …) means it will NOT be delivered.
+AT_ACCEPTED_CODES = {100, 101, 102}
+
+
 def deliver_sms(number: str, message: str, *, context: str = "") -> str:
-	"""Send one SMS through Frappe's gateway. Returns 'logged' | 'sent' | 'error'."""
-	if not frappe.db.get_single_value("SMS Settings", "sms_gateway_url"):
+	"""Send one SMS. Returns 'logged' (no gateway) | 'sent' | 'error'.
+
+	For Africa's Talking we read the response body — a plain HTTP 200 from AT
+	does not mean the message went out (e.g. the recipient has opted out of
+	promotional SMS), so we check the per-recipient status code and treat
+	anything unexpected as a failure worth logging.
+	"""
+	gateway_url = frappe.db.get_single_value("SMS Settings", "sms_gateway_url")
+	if not gateway_url:
 		frappe.logger("alicia_reviews").info(
 			f"SMS gateway not configured — would send to {number}: {message} ({context})"
 		)
 		return "logged"
 
 	try:
+		if "africastalking" in gateway_url:
+			ok, detail = _send_via_africastalking(number, message)
+			if not ok:
+				frappe.log_error(
+					title="Alicia booking SMS not delivered",
+					message=f"{context}\nnumber={number}\n{detail}",
+				)
+				return "error"
+			_record_sms_log(number, message)
+			return "sent"
+
 		from frappe.core.doctype.sms_settings.sms_settings import send_sms
 
 		send_sms([number], message, success_msg=False)
@@ -181,6 +205,48 @@ def deliver_sms(number: str, message: str, *, context: str = "") -> str:
 			message=f"{context}\nnumber={number}\n\n{frappe.get_traceback()}",
 		)
 		return "error"
+
+
+def _send_via_africastalking(number: str, message: str) -> tuple[bool, str]:
+	"""POST to Africa's Talking using the SMS Settings config, then read the result."""
+	import requests
+
+	# Read fresh, not cached — a stale API key here means silent 401s.
+	settings = frappe.get_doc("SMS Settings")
+	headers = {"Accept": "application/json"}
+	data = {settings.message_parameter: message, settings.receiver_parameter: number}
+	for param in settings.parameters:
+		if param.header:
+			headers[param.parameter] = param.value
+		else:
+			data[param.parameter] = param.value
+
+	response = requests.post(settings.sms_gateway_url, data=data, headers=headers, timeout=30)
+	response.raise_for_status()
+	body = response.json()
+
+	recipients = (body.get("SMSMessageData") or {}).get("Recipients") or []
+	if not recipients:
+		return False, "AT: {0}".format((body.get("SMSMessageData") or {}).get("Message") or body)
+
+	recipient = recipients[0]
+	code = recipient.get("statusCode")
+	label = f"AT {recipient.get('status')} ({code}) messageId={recipient.get('messageId')}"
+	return code in AT_ACCEPTED_CODES, label
+
+
+def _record_sms_log(number: str, message: str):
+	frappe.get_doc(
+		{
+			"doctype": "SMS Log",
+			"sent_on": nowdate(),
+			"message": message,
+			"no_of_requested_sms": 1,
+			"requested_numbers": number,
+			"no_of_sent_sms": 1,
+			"sent_to": number,
+		}
+	).insert(ignore_permissions=True)
 
 
 def send_booking_sms(doc, kind: str) -> str:
