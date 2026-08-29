@@ -148,23 +148,11 @@ app_license = "mit"
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"alicia_reviews.tasks.all"
-# 	],
-# 	"daily": [
-# 		"alicia_reviews.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"alicia_reviews.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"alicia_reviews.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"alicia_reviews.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"daily": [
+		"alicia_reviews.alicia_reviews.doctype.website_booking.website_booking.cancel_weekend_bookings"
+	],
+}
 
 # Testing
 # -------
