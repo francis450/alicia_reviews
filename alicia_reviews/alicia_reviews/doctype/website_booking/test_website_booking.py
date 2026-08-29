@@ -6,8 +6,10 @@ from frappe.utils import add_days, getdate, nowdate
 
 from alicia_reviews.alicia_reviews.doctype.website_booking.website_booking import (
 	cancel_weekend_bookings,
+	get_status_sms_preview,
 	normalize_msisdn,
 	send_booking_sms,
+	send_status_sms,
 )
 
 NOTIFY_USER = "maggie@alicia.boraerp.co.ke"
@@ -36,6 +38,7 @@ class TestWebsiteBooking(FrappeTestCase):
 		self.settings.block_weekend_bookings = 1
 		self.settings.weekend_message = "Fridays and Saturdays are walk-in only — please choose another day."
 		self.settings.sms_enabled = 0
+		self.settings.review_sms_before_send = 0
 		self.settings.sms_new_booking_enabled = 0
 		self.settings.notify_recipients = ""
 		self.settings.save(ignore_permissions=True)
@@ -150,6 +153,81 @@ class TestWebsiteBooking(FrappeTestCase):
 			self.assertEqual(send_booking_sms(doc, "confirmed"), "sent")
 		send.assert_called_once()
 		self.assertEqual(send.call_args[0][0], ["+254712345678"])
+
+	# ------------------------------------------------------- review-before-send
+	def test_review_mode_holds_back_auto_sms(self):
+		self.settings.sms_enabled = 1
+		self.settings.review_sms_before_send = 1
+		self.settings.save(ignore_permissions=True)
+		doc = self._make()
+		with patch(
+			"alicia_reviews.alicia_reviews.doctype.website_booking.website_booking.send_booking_sms"
+		) as spy:
+			doc.status = "Confirmed"
+			doc.save(ignore_permissions=True)
+		spy.assert_not_called()
+
+	def test_review_mode_still_sends_when_forced(self):
+		self.settings.sms_enabled = 1
+		self.settings.review_sms_before_send = 1
+		self.settings.save(ignore_permissions=True)
+		doc = self._make()
+		with patch(
+			"alicia_reviews.alicia_reviews.doctype.website_booking.website_booking.send_booking_sms"
+		) as spy:
+			frappe.flags.alicia_send_sms_now = True
+			try:
+				doc.status = "Confirmed"
+				doc.save(ignore_permissions=True)
+			finally:
+				frappe.flags.alicia_send_sms_now = False
+		spy.assert_called_once()
+
+	def test_get_status_sms_preview(self):
+		self.settings.sms_enabled = 1
+		self.settings.review_sms_before_send = 1
+		self.settings.sms_confirmed = "Hi {customer_name}, {preferred_date}."
+		self.settings.save(ignore_permissions=True)
+		doc = self._make()
+		preview = get_status_sms_preview(doc.name, "confirmed")
+		self.assertTrue(preview["enabled"])
+		self.assertTrue(preview["review"])
+		self.assertEqual(preview["number"], "+254712345678")
+		self.assertIn("Hi Test Client", preview["message"])
+
+	def test_send_status_sms_delivers_edited_text(self):
+		doc = self._make()
+		with patch.object(frappe.db, "get_single_value", return_value="https://sms.example/api"), patch(
+			"frappe.core.doctype.sms_settings.sms_settings.send_sms"
+		) as send:
+			result = send_status_sms(doc.name, "confirmed", "0712345678", "Custom text")
+		self.assertEqual(result["status"], "sent")
+		send.assert_called_once()
+		self.assertEqual(send.call_args[0][0], ["+254712345678"])
+		self.assertEqual(send.call_args[0][1], "Custom text")
+
+	def test_send_status_sms_requires_number_and_message(self):
+		doc = self._make()
+		with self.assertRaises(frappe.ValidationError):
+			send_status_sms(doc.name, "confirmed", "", "hi")
+		with self.assertRaises(frappe.ValidationError):
+			send_status_sms(doc.name, "confirmed", "0712345678", "")
+
+	def test_scheduler_sends_cancellation_sms_in_review_mode(self):
+		self.settings.block_weekend_bookings = 0
+		self.settings.sms_enabled = 1
+		self.settings.review_sms_before_send = 1
+		self.settings.save(ignore_permissions=True)
+		booking = self._make(preferred_date=NEXT_SATURDAY, status="Confirmed")
+
+		self.settings.block_weekend_bookings = 1
+		self.settings.save(ignore_permissions=True)
+		with patch.object(frappe.db, "get_single_value", return_value="https://sms.example/api"), patch(
+			"frappe.core.doctype.sms_settings.sms_settings.send_sms"
+		) as send:
+			cancel_weekend_bookings()
+		self.assertEqual(frappe.db.get_value("Website Booking", booking.name, "status"), "Cancelled")
+		send.assert_called_once()
 
 	# ------------------------------------------------------------- scheduler
 	def test_cancel_weekend_bookings(self):

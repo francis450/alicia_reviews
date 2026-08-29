@@ -34,10 +34,23 @@ class WebsiteBooking(Document):
 		previous = self.get_doc_before_save()
 		if not previous or previous.status == self.status:
 			return
-		if self.status == "Confirmed":
-			send_booking_sms(self, "confirmed")
-		elif self.status == "Cancelled":
-			send_booking_sms(self, "cancelled")
+
+		kind = {"Confirmed": "confirmed", "Cancelled": "cancelled"}.get(self.status)
+		if not kind:
+			return
+
+		settings = get_settings()
+		# In "review" mode the desk form pops the message up for staff to edit and
+		# send by hand — so don't fire automatically. Background callers (the
+		# weekend-cancel job, imports, the API) set this flag to send anyway.
+		if (
+			settings.sms_enabled
+			and settings.review_sms_before_send
+			and not frappe.flags.get("alicia_send_sms_now")
+		):
+			return
+
+		send_booking_sms(self, kind)
 
 	def _block_weekend_on_create(self):
 		# Only guard new bookings — never get in the way of staff editing history.
@@ -122,36 +135,38 @@ def normalize_msisdn(number) -> str | None:
 	return digits or None
 
 
-def send_booking_sms(doc, kind: str) -> str:
-	"""Send (or log) an SMS for a booking event.
+def resolve_booking_sms(doc, kind: str, settings=None):
+	"""Work out the recipient number + rendered message for a booking event.
 
 	kind: 'confirmed' | 'cancelled' | 'new_booking'.
-	Returns a short status: 'disabled' | 'incomplete' | 'logged' | 'sent' | 'error'.
+	Returns (number, message) or (None, None) when it shouldn't be sent.
 	"""
-	settings = get_settings()
+	settings = settings or get_settings()
 
 	if kind in ("confirmed", "cancelled"):
 		if not settings.sms_enabled:
-			return "disabled"
+			return None, None
 		template = settings.sms_confirmed if kind == "confirmed" else settings.sms_cancelled
 		number = normalize_msisdn(doc.phone)
 	elif kind == "new_booking":
 		if not settings.sms_new_booking_enabled:
-			return "disabled"
+			return None, None
 		template = settings.sms_new_booking
 		number = normalize_msisdn(settings.sms_new_booking_number)
 	else:
-		return "disabled"
+		return None, None
 
 	if not template or not number:
-		return "incomplete"
+		return None, None
 
-	message = _render_template(template, doc)
+	return number, _render_template(template, doc)
 
+
+def deliver_sms(number: str, message: str, *, context: str = "") -> str:
+	"""Send one SMS through Frappe's gateway. Returns 'logged' | 'sent' | 'error'."""
 	if not frappe.db.get_single_value("SMS Settings", "sms_gateway_url"):
 		frappe.logger("alicia_reviews").info(
-			f"SMS gateway not configured — would send '{kind}' SMS for booking {doc.name} "
-			f"to {number}: {message}"
+			f"SMS gateway not configured — would send to {number}: {message} ({context})"
 		)
 		return "logged"
 
@@ -163,9 +178,61 @@ def send_booking_sms(doc, kind: str) -> str:
 	except Exception:
 		frappe.log_error(
 			title="Alicia booking SMS failed",
-			message=f"kind={kind} booking={doc.name} number={number}\n\n{frappe.get_traceback()}",
+			message=f"{context}\nnumber={number}\n\n{frappe.get_traceback()}",
 		)
 		return "error"
+
+
+def send_booking_sms(doc, kind: str) -> str:
+	"""Resolve + send an SMS for a booking event (the automatic path).
+
+	Returns 'disabled' | 'sent' | 'logged' | 'error'.
+	"""
+	number, message = resolve_booking_sms(doc, kind)
+	if not number:
+		return "disabled"
+	return deliver_sms(number, message, context=f"kind={kind} booking={doc.name}")
+
+
+@frappe.whitelist()
+def get_status_sms_preview(name: str, kind: str) -> dict:
+	"""For the desk form: the message that would be sent for this status change."""
+	if kind not in ("confirmed", "cancelled"):
+		frappe.throw(_("Unknown SMS type."))
+	frappe.has_permission("Website Booking", "read", doc=name, throw=True)
+
+	settings = get_settings()
+	doc = frappe.get_doc("Website Booking", name)
+	number, message = resolve_booking_sms(doc, kind, settings)
+	return {
+		"enabled": bool(settings.sms_enabled),
+		"review": bool(settings.review_sms_before_send),
+		"number": number or normalize_msisdn(doc.phone) or "",
+		"message": message
+		or _render_template(
+			settings.sms_confirmed if kind == "confirmed" else settings.sms_cancelled, doc
+		),
+	}
+
+
+@frappe.whitelist()
+def send_status_sms(name: str, kind: str, number: str, message: str) -> dict:
+	"""For the desk form: send the (possibly edited) status SMS by hand."""
+	if kind not in ("confirmed", "cancelled"):
+		frappe.throw(_("Unknown SMS type."))
+	frappe.has_permission("Website Booking", "write", doc=name, throw=True)
+
+	number = normalize_msisdn(number)
+	message = (message or "").strip()
+	if not number or not message:
+		frappe.throw(_("A phone number and a message are both required."))
+
+	status = deliver_sms(number, message, context=f"kind={kind} booking={name} (manual)")
+	frappe.get_doc("Website Booking", name).add_comment(
+		"Comment",
+		_("{0} SMS {1}: {2}").format(kind.title(), status, message),
+	)
+	return {"status": status}
 
 
 # ---------------------------------------------------------------------------
@@ -189,13 +256,19 @@ def cancel_weekend_bookings():
 		},
 		fields=["name", "preferred_date"],
 	)
-	for row in rows:
-		if not is_weekend(row.preferred_date):
-			continue
-		doc = frappe.get_doc("Website Booking", row.name)
-		doc.status = "Cancelled"
-		doc.save(ignore_permissions=True)
-		doc.add_comment(
-			"Comment",
-			_("Auto-cancelled: Fridays & Saturdays are walk-in only."),
-		)
+	# No human is watching this job, so send the cancellation SMS straight away
+	# even when "review before sending" is on.
+	frappe.flags.alicia_send_sms_now = True
+	try:
+		for row in rows:
+			if not is_weekend(row.preferred_date):
+				continue
+			doc = frappe.get_doc("Website Booking", row.name)
+			doc.status = "Cancelled"
+			doc.save(ignore_permissions=True)
+			doc.add_comment(
+				"Comment",
+				_("Auto-cancelled: Fridays & Saturdays are walk-in only."),
+			)
+	finally:
+		frappe.flags.alicia_send_sms_now = False

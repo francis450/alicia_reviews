@@ -12,6 +12,7 @@
   "notify_recipients",
   "sms_section",
   "sms_enabled",
+  "review_sms_before_send",
   "sms_confirmed",
   "sms_cancelled",
   "sms_column",
@@ -60,6 +61,14 @@
    "fieldname": "sms_enabled",
    "fieldtype": "Check",
    "label": "Send SMS to clients on Confirm / Cancel"
+  },
+  {
+   "default": "1",
+   "depends_on": "sms_enabled",
+   "description": "Pop up the message on the booking so staff can edit it before it goes out, instead of sending automatically the moment the status changes.",
+   "fieldname": "review_sms_before_send",
+   "fieldtype": "Check",
+   "label": "Review the SMS before sending"
   },
   {
    "default": "Hi {customer_name}, your appointment at Alicia Hairline & Beauty for {service} on {preferred_date} at {preferred_time} is CONFIRMED. See you then!",
