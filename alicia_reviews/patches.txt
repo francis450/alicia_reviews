@@ -6,3 +6,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 alicia_reviews.patches.v1_0.seed_alicia_booking_settings
 alicia_reviews.patches.v1_0.enable_sms_review_default
+alicia_reviews.patches.v1_0.seed_copilot_tools
