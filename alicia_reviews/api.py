@@ -1,4 +1,111 @@
 import frappe
+from frappe.utils import flt, strip_html_tags
+
+# Price list the storefront reads selling rates from (matches the frontend's
+# ERPNext integration). Override per-site with `alicia_selling_price_list` in
+# site_config.json if the price list is named differently.
+DEFAULT_SELLING_PRICE_LIST = "Selling Price"
+
+
+def _selling_price_list():
+    return frappe.conf.get("alicia_selling_price_list") or DEFAULT_SELLING_PRICE_LIST
+
+
+def get_website_products(item_group=None, search=None, limit=200):
+    filters = {"published": 1}
+    if item_group:
+        filters["item_group"] = item_group
+
+    or_filters = None
+    if search:
+        term = f"%{search}%"
+        or_filters = {"web_item_name": ["like", term], "item_name": ["like", term]}
+
+    items = frappe.get_all(
+        "Website Item",
+        filters=filters,
+        or_filters=or_filters,
+        fields=[
+            "item_code",
+            "web_item_name",
+            "item_name",
+            "item_group",
+            "website_image",
+            "short_description",
+            "web_long_description",
+            "route",
+            "on_backorder",
+        ],
+        order_by="ranking desc, web_item_name asc",
+        limit_page_length=min(int(limit or 200), 500),
+    )
+    if not items:
+        return []
+
+    codes = [d.item_code for d in items]
+
+    stock_item = dict(
+        frappe.get_all(
+            "Item",
+            filters={"item_code": ["in", codes]},
+            fields=["item_code", "is_stock_item"],
+            as_list=True,
+        )
+    )
+
+    price_list = _selling_price_list()
+    prices = {}
+    for row in frappe.get_all(
+        "Item Price",
+        filters={"price_list": price_list, "item_code": ["in", codes]},
+        fields=["item_code", "price_list_rate"],
+        order_by="valid_from desc",
+    ):
+        prices.setdefault(row.item_code, row.price_list_rate)
+
+    bin_qty = {}
+    for row in frappe.get_all(
+        "Bin",
+        filters={"item_code": ["in", codes]},
+        fields=["item_code", "sum(actual_qty) as qty"],
+        group_by="item_code",
+    ):
+        bin_qty[row.item_code] = flt(row.qty)
+
+    products = []
+    for d in items:
+        is_stock_item = stock_item.get(d.item_code, 1)
+        if d.on_backorder:
+            in_stock = False
+        elif is_stock_item:
+            in_stock = bin_qty.get(d.item_code, 0) > 0
+        else:
+            in_stock = True
+
+        description = (d.short_description or "").strip()
+        if not description and d.web_long_description:
+            description = strip_html_tags(d.web_long_description).strip()
+
+        products.append(
+            {
+                "item_code": d.item_code,
+                "name": d.web_item_name or d.item_name or d.item_code,
+                "price": flt(prices.get(d.item_code, 0)),
+                "image": d.website_image or None,
+                "category": d.item_group,
+                "description": description,
+                "in_stock": in_stock,
+                "route": d.route or None,
+            }
+        )
+    return products
+
+
+@frappe.whitelist(allow_guest=True)
+def website_products(item_group=None, search=None, limit=200):
+    if frappe.request.method != "GET":
+        frappe.throw("Method not allowed", frappe.ValidationError)
+    return get_website_products(item_group=item_group, search=search, limit=limit)
 
 def validate_review(data):
     name = (data.get("name") or "").strip()
