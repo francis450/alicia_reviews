@@ -1,0 +1,179 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-09-04 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "credentials_section",
+  "enabled",
+  "sandbox",
+  "consumer_key",
+  "consumer_secret",
+  "credentials_column",
+  "ipn_id",
+  "ipn_url",
+  "urls_section",
+  "callback_url",
+  "erp_section",
+  "company",
+  "warehouse",
+  "selling_price_list",
+  "currency",
+  "erp_column",
+  "customer_group",
+  "territory",
+  "payment_section",
+  "mode_of_payment",
+  "deposit_account"
+ ],
+ "fields": [
+  {
+   "fieldname": "credentials_section",
+   "fieldtype": "Section Break",
+   "label": "Pesapal Credentials"
+  },
+  {
+   "default": "0",
+   "description": "Master switch. When off, create_cart_payment refuses with a clear message instead of calling Pesapal.",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "default": "1",
+   "description": "When ticked, uses the Pesapal sandbox (cybqa.pesapal.com). Untick only with live credentials.",
+   "fieldname": "sandbox",
+   "fieldtype": "Check",
+   "label": "Use sandbox (test) environment"
+  },
+  {
+   "fieldname": "consumer_key",
+   "fieldtype": "Data",
+   "label": "Consumer Key"
+  },
+  {
+   "fieldname": "consumer_secret",
+   "fieldtype": "Password",
+   "label": "Consumer Secret"
+  },
+  {
+   "fieldname": "credentials_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Set automatically after the IPN URL is registered with Pesapal. Use the 'Register IPN' button / bench command to (re)register.",
+   "fieldname": "ipn_id",
+   "fieldtype": "Data",
+   "label": "Registered IPN ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ipn_url",
+   "fieldtype": "Data",
+   "label": "Registered IPN URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "urls_section",
+   "fieldtype": "Section Break",
+   "label": "URLs"
+  },
+  {
+   "default": "https://alicia.boraerp.co.ke/checkout/callback",
+   "description": "Where Pesapal sends the customer's browser back to after payment. This is a frontend route — confirm with the storefront.",
+   "fieldname": "callback_url",
+   "fieldtype": "Data",
+   "label": "Checkout callback URL (frontend)"
+  },
+  {
+   "fieldname": "erp_section",
+   "fieldtype": "Section Break",
+   "label": "Sales Order / Invoice defaults"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "description": "Warehouse used on the Sales Order lines.",
+   "fieldname": "warehouse",
+   "fieldtype": "Link",
+   "label": "Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "default": "Selling Price",
+   "fieldname": "selling_price_list",
+   "fieldtype": "Link",
+   "label": "Selling Price List",
+   "options": "Price List"
+  },
+  {
+   "default": "KES",
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "erp_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Individual",
+   "fieldname": "customer_group",
+   "fieldtype": "Link",
+   "label": "Customer Group",
+   "options": "Customer Group"
+  },
+  {
+   "fieldname": "territory",
+   "fieldtype": "Link",
+   "label": "Territory",
+   "options": "Territory"
+  },
+  {
+   "fieldname": "payment_section",
+   "fieldtype": "Section Break",
+   "label": "Payment Entry (created on successful payment)"
+  },
+  {
+   "default": "MPESA",
+   "fieldname": "mode_of_payment",
+   "fieldtype": "Link",
+   "label": "Mode of Payment",
+   "options": "Mode of Payment"
+  },
+  {
+   "description": "Account money is received into (Paid To). Usually a bank or M-Pesa clearing account.",
+   "fieldname": "deposit_account",
+   "fieldtype": "Link",
+   "label": "Deposit / Paid To Account",
+   "options": "Account"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-09-04 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Alicia Reviews",
+ "name": "Pesapal Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 0,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

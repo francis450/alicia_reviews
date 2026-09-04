@@ -1,0 +1,221 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "PESA-.YYYY.-.#####",
+ "creation": "2026-09-04 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "customer_section",
+  "customer",
+  "customer_name",
+  "email",
+  "phone",
+  "customer_column",
+  "sales_order",
+  "sales_invoice",
+  "payment_entry",
+  "amount_section",
+  "amount",
+  "currency",
+  "amount_column",
+  "merchant_reference",
+  "order_tracking_id",
+  "status",
+  "pesapal_section",
+  "redirect_url",
+  "payment_method",
+  "confirmation_code",
+  "status_description",
+  "pesapal_column",
+  "notes",
+  "log_section",
+  "ipn_log"
+ ],
+ "fields": [
+  {
+   "fieldname": "customer_section",
+   "fieldtype": "Section Break",
+   "label": "Customer"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "label": "Customer Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email",
+   "read_only": 1
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Phone",
+   "read_only": 1
+  },
+  {
+   "fieldname": "customer_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "Sales Order",
+   "options": "Sales Order",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales Invoice",
+   "options": "Sales Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_entry",
+   "fieldtype": "Link",
+   "label": "Payment Entry",
+   "options": "Payment Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount_section",
+   "fieldtype": "Section Break",
+   "label": "Amount"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "The unique id sent to Pesapal as the order reference.",
+   "fieldname": "merchant_reference",
+   "fieldtype": "Data",
+   "label": "Merchant Reference",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "order_tracking_id",
+   "fieldtype": "Data",
+   "label": "Order Tracking ID",
+   "read_only": 1
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Pending\nCompleted\nFailed\nReversed\nInvalid",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pesapal_section",
+   "fieldtype": "Section Break",
+   "label": "Pesapal"
+  },
+  {
+   "fieldname": "redirect_url",
+   "fieldtype": "Small Text",
+   "label": "Redirect URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_method",
+   "fieldtype": "Data",
+   "label": "Payment Method",
+   "read_only": 1
+  },
+  {
+   "fieldname": "confirmation_code",
+   "fieldtype": "Data",
+   "label": "Confirmation Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status_description",
+   "fieldtype": "Data",
+   "label": "Status Description",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pesapal_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes",
+   "read_only": 1
+  },
+  {
+   "fieldname": "log_section",
+   "fieldtype": "Section Break",
+   "label": "IPN / Status Log"
+  },
+  {
+   "fieldname": "ipn_log",
+   "fieldtype": "Code",
+   "label": "IPN / Status Log",
+   "options": "JSON",
+   "read_only": 1
+  }
+ ],
+ "issingle": 0,
+ "links": [],
+ "modified": "2026-09-04 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Alicia Reviews",
+ "name": "Pesapal Transaction",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Sales User"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}
